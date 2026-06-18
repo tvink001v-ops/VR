@@ -7,168 +7,240 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: #1a1a2e;
+            background: #0a0a0a;
             color: #fff;
-            font-family: Arial;
+            font-family: 'Segoe UI', Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
             padding: 20px;
+            overflow: hidden;
         }
-        h1 { color: #00d4ff; margin: 20px 0; font-size: 28px; }
-        .container {
-            background: #16213e;
-            border-radius: 20px;
-            padding: 30px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-        }
-        .gyro-box {
-            background: #0f3460;
-            border-radius: 15px;
-            padding: 20px;
+        .header {
+            text-align: center;
             margin: 20px 0;
-            text-align: center;
-            border: 2px solid #00d4ff;
         }
-        .gyro-value {
+        .header h1 {
             font-size: 32px;
-            color: #00d4ff;
-            font-weight: bold;
-            margin: 10px 0;
+            background: linear-gradient(45deg, #00d4ff, #7b2fff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
         }
-        .gyro-label {
-            color: #888;
+        .header p {
+            color: #666;
             font-size: 14px;
         }
-        button {
-            background: #00d4ff;
-            color: #1a1a2e;
-            border: none;
-            padding: 18px 40px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 10px;
-            cursor: pointer;
+        .main-panel {
+            background: #111;
+            border-radius: 24px;
+            padding: 24px;
             width: 100%;
-            margin: 10px 0;
+            max-width: 380px;
+            border: 1px solid #222;
         }
-        button:active { transform: scale(0.95); }
-        button.stop { background: #ff4757; color: #fff; }
-        .status {
+        .gyro-values {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
+        .gyro-card {
+            background: #1a1a1a;
+            border-radius: 16px;
+            padding: 16px;
             text-align: center;
-            padding: 10px;
-            border-radius: 10px;
-            margin: 10px 0;
+            border: 1px solid #2a2a2a;
         }
-        .connected { background: #00b894; }
-        .disconnected { background: #ff4757; }
-        .info {
-            background: #0f3460;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 10px 0;
-            font-size: 14px;
-            word-break: break-all;
+        .gyro-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00d4ff;
+            margin: 8px 0;
         }
-        input {
+        .gyro-card .label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .connection-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 12px;
+            margin: 16px 0;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff4444;
+        }
+        .dot.active {
+            background: #00ff88;
+            box-shadow: 0 0 12px #00ff88;
+        }
+        .input-group {
+            margin: 12px 0;
+        }
+        .input-group input {
             width: 100%;
-            padding: 15px;
-            border: 2px solid #0f3460;
-            border-radius: 10px;
-            background: #1a1a2e;
+            padding: 14px;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
             color: #fff;
             font-size: 16px;
-            margin: 10px 0;
             outline: none;
         }
-        input:focus { border-color: #00d4ff; }
+        .input-group input:focus {
+            border-color: #00d4ff;
+        }
+        button {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 8px 0;
+            transition: all 0.3s;
+        }
+        .btn-start {
+            background: linear-gradient(45deg, #00d4ff, #0088ff);
+            color: #000;
+        }
+        .btn-connect {
+            background: linear-gradient(45deg, #7b2fff, #ff2d55);
+            color: #fff;
+        }
+        .btn-stop {
+            background: #ff2d55;
+            color: #fff;
+        }
+        button:active {
+            transform: scale(0.96);
+        }
     </style>
 </head>
 <body>
-    <h1>🎮 VR Gyro Controller</h1>
-    <div class="container">
-        <div class="status disconnected" id="status">Disconnected</div>
-        
-        <div class="info">
-            <div class="gyro-label">Connection ID:</div>
-            <div id="connectionId">-</div>
+    <div class="header">
+        <h1>VR Gyro Controller</h1>
+        <p>Phone → Unity</p>
+    </div>
+    
+    <div class="main-panel">
+        <div class="connection-bar">
+            <div class="dot" id="statusDot"></div>
+            <span id="statusText">Not connected</span>
         </div>
         
-        <button onclick="startGyro()">START GYRO</button>
+        <div class="gyro-values">
+            <div class="gyro-card">
+                <div class="label">Alpha</div>
+                <div class="value" id="alphaVal">0°</div>
+            </div>
+            <div class="gyro-card">
+                <div class="label">Beta</div>
+                <div class="value" id="betaVal">0°</div>
+            </div>
+            <div class="gyro-card">
+                <div class="label">Gamma</div>
+                <div class="value" id="gammaVal">0°</div>
+            </div>
+        </div>
         
-        <div class="gyro-box">
-            <div class="gyro-label">Alpha (Z)</div>
-            <div class="gyro-value" id="alpha">0.0°</div>
-        </div>
-        <div class="gyro-box">
-            <div class="gyro-label">Beta (X)</div>
-            <div class="gyro-value" id="beta">0.0°</div>
-        </div>
-        <div class="gyro-box">
-            <div class="gyro-label">Gamma (Y)</div>
-            <div class="gyro-value" id="gamma">0.0°</div>
+        <div class="input-group">
+            <input type="text" id="ipInput" placeholder="Unity IP:Port" value="192.168.0.15:5000">
         </div>
         
-        <input type="text" id="unityIP" placeholder="Unity server IP:Port" value="192.168.0.15:5000">
-        <button onclick="connectToUnity()">CONNECT TO UNITY</button>
+        <button class="btn-start" id="gyroBtn" onclick="toggleGyro()">START GYRO</button>
+        <button class="btn-connect" id="connectBtn" onclick="toggleConnection()">CONNECT</button>
     </div>
 
     <script>
         let ws = null;
-        let gyroActive = false;
-        let unityWs = null;
+        let gyroOn = false;
+        let connected = false;
         
-        function startGyro() {
-            if (typeof DeviceOrientationEvent !== 'undefined') {
-                if (DeviceOrientationEvent.requestPermission) {
-                    DeviceOrientationEvent.requestPermission().then(response => {
-                        if (response === 'granted') {
-                            enableGyro();
-                        }
+        function toggleGyro() {
+            if (!gyroOn) {
+                if (DeviceOrientationEvent?.requestPermission) {
+                    DeviceOrientationEvent.requestPermission().then(r => {
+                        if (r === 'granted') startGyro();
                     });
                 } else {
-                    enableGyro();
+                    startGyro();
                 }
+            } else {
+                stopGyro();
             }
         }
         
-        function enableGyro() {
-            gyroActive = true;
-            window.addEventListener('deviceorientation', handleOrientation);
-            document.querySelector('button').textContent = 'GYRO ACTIVE';
-            document.querySelector('button').classList.add('stop');
+        function startGyro() {
+            gyroOn = true;
+            window.addEventListener('deviceorientation', onOrientation);
+            document.getElementById('gyroBtn').textContent = 'STOP GYRO';
+            document.getElementById('gyroBtn').className = 'btn-stop';
         }
         
-        function handleOrientation(event) {
-            document.getElementById('alpha').textContent = (event.alpha || 0).toFixed(1) + '°';
-            document.getElementById('beta').textContent = (event.beta || 0).toFixed(1) + '°';
-            document.getElementById('gamma').textContent = (event.gamma || 0).toFixed(1) + '°';
+        function stopGyro() {
+            gyroOn = false;
+            window.removeEventListener('deviceorientation', onOrientation);
+            document.getElementById('gyroBtn').textContent = 'START GYRO';
+            document.getElementById('gyroBtn').className = 'btn-start';
+        }
+        
+        function onOrientation(e) {
+            const a = (e.alpha || 0).toFixed(1);
+            const b = (e.beta || 0).toFixed(1);
+            const g = (e.gamma || 0).toFixed(1);
             
-            if (unityWs && unityWs.readyState === WebSocket.OPEN) {
-                unityWs.send(JSON.stringify({
-                    alpha: event.alpha || 0,
-                    beta: event.beta || 0,
-                    gamma: event.gamma || 0
-                }));
+            document.getElementById('alphaVal').textContent = a + '°';
+            document.getElementById('betaVal').textContent = b + '°';
+            document.getElementById('gammaVal').textContent = g + '°';
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({alpha: e.alpha, beta: e.beta, gamma: e.gamma}));
             }
         }
         
-        function connectToUnity() {
-            const ip = document.getElementById('unityIP').value;
-            unityWs = new WebSocket('ws://' + ip);
+        function toggleConnection() {
+            if (!connected) {
+                connect();
+            } else {
+                disconnect();
+            }
+        }
+        
+        function connect() {
+            const ip = document.getElementById('ipInput').value;
+            ws = new WebSocket('ws://' + ip);
             
-            unityWs.onopen = () => {
-                document.getElementById('status').textContent = 'Connected to Unity';
-                document.getElementById('status').className = 'status connected';
+            ws.onopen = () => {
+                connected = true;
+                document.getElementById('statusDot').className = 'dot active';
+                document.getElementById('statusText').textContent = 'Connected';
+                document.getElementById('connectBtn').textContent = 'DISCONNECT';
+                document.getElementById('connectBtn').className = 'btn-stop';
             };
             
-            unityWs.onclose = () => {
-                document.getElementById('status').textContent = 'Disconnected';
-                document.getElementById('status').className = 'status disconnected';
+            ws.onclose = () => {
+                connected = false;
+                document.getElementById('statusDot').className = 'dot';
+                document.getElementById('statusText').textContent = 'Disconnected';
+                document.getElementById('connectBtn').textContent = 'CONNECT';
+                document.getElementById('connectBtn').className = 'btn-connect';
             };
+        }
+        
+        function disconnect() {
+            if (ws) ws.close();
+            ws = null;
         }
     </script>
 </body>
