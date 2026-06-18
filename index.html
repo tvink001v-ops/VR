@@ -1,86 +1,56 @@
-using UnityEngine;
-using System;
-using System.Net;
-using System.IO;
-using System.Threading;
-
-public class GyroServer : MonoBehaviour
-{
-    private HttpListener listener;
-    private Thread thread;
-    private float alpha, beta, gamma;
-    private bool newData;
-    private int port = 5000;
-
-    void Start()
-    {
-        listener = new HttpListener();
-        listener.Prefixes.Add("http://*:5000/");
-        listener.Start();
-        Debug.Log("Server on port 5000");
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>VR Gyro</title>
+    <style>
+        body { background: #000; color: #fff; text-align: center; padding: 20px; font-family: Arial; }
+        button { padding: 15px 30px; font-size: 18px; margin: 10px; background: #00ff88; border: none; border-radius: 10px; }
+        input { padding: 10px; font-size: 16px; width: 200px; border-radius: 5px; border: none; }
+        #data { font-size: 20px; color: #00ff88; }
+    </style>
+</head>
+<body>
+    <h1>VR Gyro Controller</h1>
+    <p id="data">-</p>
+    <input id="ip" value="192.168.0.15:5000" placeholder="IP:Port">
+    <br>
+    <button onclick="start()">START</button>
+    <p id="status">-</p>
+    
+    <script>
+        function start() {
+            const ip = document.getElementById('ip').value;
+            
+            if (DeviceOrientationEvent?.requestPermission) {
+                DeviceOrientationEvent.requestPermission().then(r => {
+                    if (r === 'granted') listen(ip);
+                });
+            } else {
+                listen(ip);
+            }
+        }
         
-        thread = new Thread(Listen);
-        thread.IsBackground = true;
-        thread.Start();
-    }
-
-    void Listen()
-    {
-        while (true)
-        {
-            try
-            {
-                var ctx = listener.GetContext();
-                var req = ctx.Request;
-                var res = ctx.Response;
-
-                if (req.HttpMethod == "POST")
-                {
-                    using (var reader = new StreamReader(req.InputStream))
-                    {
-                        string body = reader.ReadToEnd();
-                        Debug.Log("RAW: " + body);
-                        
-                        body = body.Replace("\\\"", "\"").Trim('"');
-                        var data = JsonUtility.FromJson<GyroData>(body);
-                        alpha = data.alpha;
-                        beta = data.beta;
-                        gamma = data.gamma;
-                        newData = true;
-                    }
-                }
-
-                res.AddHeader("Access-Control-Allow-Origin", "*");
-                res.StatusCode = 200;
-                res.OutputStream.Close();
-            }
-            catch (Exception e)
-            {
-                Debug.LogError(e.Message);
-            }
+        function listen(ip) {
+            window.addEventListener('deviceorientation', (e) => {
+                const d = {alpha: e.alpha||0, beta: e.beta||0, gamma: e.gamma||0};
+                document.getElementById('data').textContent = 
+                    d.alpha.toFixed(1) + ' ' + d.beta.toFixed(1) + ' ' + d.gamma.toFixed(1);
+                
+                // Используем fetch с no-cors
+                fetch('http://' + ip + '/gyro', {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {'Content-Type': 'text/plain'},
+                    body: JSON.stringify(d)
+                }).then(() => {
+                    document.getElementById('status').textContent = 'Sent OK';
+                }).catch((err) => {
+                    document.getElementById('status').textContent = 'Error: ' + err;
+                });
+            });
         }
-    }
-
-    void Update()
-    {
-        if (newData)
-        {
-            newData = false;
-            transform.rotation = Quaternion.Euler(beta, gamma, -alpha);
-        }
-    }
-
-    void OnDestroy()
-    {
-        listener?.Stop();
-        thread?.Abort();
-    }
-
-    [Serializable]
-    class GyroData
-    {
-        public float alpha;
-        public float beta;
-        public float gamma;
-    }
-}
+    </script>
+</body>
+</html>
