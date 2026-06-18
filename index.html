@@ -3,22 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>VR Gyro</title>
 <style>
 body{background:#000;color:#fff;text-align:center;padding:20px;font-family:Arial}
-#data{font-size:24px;color:#0f0;margin:20px}
-#id{color:#888;font-size:12px}
+button{padding:15px 30px;font-size:18px;background:#0f0;border:none;border-radius:10px}
+input{padding:10px;font-size:16px;width:200px;margin:10px}
+#data{font-size:20px;color:#0f0}
 </style>
 </head>
 <body>
-<h1>VR Gyro Controller</h1>
-<div id="id"></div>
-<div id="data">Press START</div>
-<button onclick="start()" style="padding:15px 30px;font-size:18px;background:#0f0;border:none;border-radius:10px">START</button>
+<h1>VR Gyro</h1>
+<div id="data">-</div>
+<input id="ip" value="192.168.0.15:5000">
+<button onclick="connect()">CONNECT</button>
+<button onclick="start()">START GYRO</button>
+
 <script>
-const uid = Math.random().toString(36).substr(2,6);
-document.getElementById('id').textContent = 'ID: '+uid;
-let db = firebase.database();
+let ws;
+function connect(){
+ ws = new WebSocket('ws://'+document.getElementById('ip').value);
+ ws.onopen = ()=>document.getElementById('data').textContent='Connected';
+ ws.onclose = ()=>document.getElementById('data').textContent='Disconnected';
+}
 function start(){
  if(DeviceOrientationEvent?.requestPermission){
   DeviceOrientationEvent.requestPermission().then(r=>{if(r=='granted')listen()})
@@ -27,16 +32,10 @@ function start(){
 function listen(){
  window.addEventListener('deviceorientation',e=>{
   const d={alpha:e.alpha||0,beta:e.beta||0,gamma:e.gamma||0};
+  if(ws&&ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify(d));
   document.getElementById('data').textContent=d.alpha.toFixed(1)+' '+d.beta.toFixed(1)+' '+d.gamma.toFixed(1);
-  db.ref('gyro/'+uid).set(d);
  })
 }
-</script>
-<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
-<script>
-const fc={apiKey:"AIzaSyD fake key replace me",authDomain:"x.firebaseapp.com",databaseURL:"https://x.firebaseio.com",projectId:"x"};
-firebase.initializeApp(fc);
 </script>
 </body>
 </html>
