@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>VR Gyro Controller</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a1a2e;
+            color: #fff;
+            font-family: Arial;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        h1 { color: #00d4ff; margin: 20px 0; font-size: 28px; }
+        .container {
+            background: #16213e;
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .gyro-box {
+            background: #0f3460;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            border: 2px solid #00d4ff;
+        }
+        .gyro-value {
+            font-size: 32px;
+            color: #00d4ff;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .gyro-label {
+            color: #888;
+            font-size: 14px;
+        }
+        button {
+            background: #00d4ff;
+            color: #1a1a2e;
+            border: none;
+            padding: 18px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            margin: 10px 0;
+        }
+        button:active { transform: scale(0.95); }
+        button.stop { background: #ff4757; color: #fff; }
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+        .connected { background: #00b894; }
+        .disconnected { background: #ff4757; }
+        .info {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #0f3460;
+            border-radius: 10px;
+            background: #1a1a2e;
+            color: #fff;
+            font-size: 16px;
+            margin: 10px 0;
+            outline: none;
+        }
+        input:focus { border-color: #00d4ff; }
+    </style>
+</head>
+<body>
+    <h1>🎮 VR Gyro Controller</h1>
+    <div class="container">
+        <div class="status disconnected" id="status">Disconnected</div>
+        
+        <div class="info">
+            <div class="gyro-label">Connection ID:</div>
+            <div id="connectionId">-</div>
+        </div>
+        
+        <button onclick="startGyro()">START GYRO</button>
+        
+        <div class="gyro-box">
+            <div class="gyro-label">Alpha (Z)</div>
+            <div class="gyro-value" id="alpha">0.0°</div>
+        </div>
+        <div class="gyro-box">
+            <div class="gyro-label">Beta (X)</div>
+            <div class="gyro-value" id="beta">0.0°</div>
+        </div>
+        <div class="gyro-box">
+            <div class="gyro-label">Gamma (Y)</div>
+            <div class="gyro-value" id="gamma">0.0°</div>
+        </div>
+        
+        <input type="text" id="unityIP" placeholder="Unity server IP:Port" value="192.168.0.15:5000">
+        <button onclick="connectToUnity()">CONNECT TO UNITY</button>
+    </div>
+
+    <script>
+        let ws = null;
+        let gyroActive = false;
+        let unityWs = null;
+        
+        function startGyro() {
+            if (typeof DeviceOrientationEvent !== 'undefined') {
+                if (DeviceOrientationEvent.requestPermission) {
+                    DeviceOrientationEvent.requestPermission().then(response => {
+                        if (response === 'granted') {
+                            enableGyro();
+                        }
+                    });
+                } else {
+                    enableGyro();
+                }
+            }
+        }
+        
+        function enableGyro() {
+            gyroActive = true;
+            window.addEventListener('deviceorientation', handleOrientation);
+            document.querySelector('button').textContent = 'GYRO ACTIVE';
+            document.querySelector('button').classList.add('stop');
+        }
+        
+        function handleOrientation(event) {
+            document.getElementById('alpha').textContent = (event.alpha || 0).toFixed(1) + '°';
+            document.getElementById('beta').textContent = (event.beta || 0).toFixed(1) + '°';
+            document.getElementById('gamma').textContent = (event.gamma || 0).toFixed(1) + '°';
+            
+            if (unityWs && unityWs.readyState === WebSocket.OPEN) {
+                unityWs.send(JSON.stringify({
+                    alpha: event.alpha || 0,
+                    beta: event.beta || 0,
+                    gamma: event.gamma || 0
+                }));
+            }
+        }
+        
+        function connectToUnity() {
+            const ip = document.getElementById('unityIP').value;
+            unityWs = new WebSocket('ws://' + ip);
+            
+            unityWs.onopen = () => {
+                document.getElementById('status').textContent = 'Connected to Unity';
+                document.getElementById('status').className = 'status connected';
+            };
+            
+            unityWs.onclose = () => {
+                document.getElementById('status').textContent = 'Disconnected';
+                document.getElementById('status').className = 'status disconnected';
+            };
+        }
+    </script>
+</body>
+</html>
